@@ -3,10 +3,9 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use argon2::{
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{PasswordHasher, SaltString},
     Argon2,
 };
-use chacha20poly1305::{ChaCha20Poly1305, KeyInit as ChaChaKeyInit};
 use hkdf::Hkdf;
 use rand::RngCore;
 use sha2::Sha256;

@@ -277,19 +277,63 @@ impl Vault {
             let new_encrypted = new_data_key.encrypt(&plaintext)?;
             cred.credential = serde_json::to_vec(&new_encrypted)?;
             
-            self.db.insert_credential(&cred).await?;
+            // Check if credential already exists, update if so
+            match self.db.get_credential(&cred.name).await? {
+                Some(existing) => {
+                    cred.id = existing.id;
+                    self.db.update_credential(&cred).await?;
+                }
+                None => {
+                    self.db.insert_credential(&cred).await?;
+                }
+            }
         }
         for server in backup.servers {
-            self.db.insert_server(&server).await?;
+            match self.db.get_server(&server.name).await? {
+                Some(existing) => {
+                    // Update existing server with new data but keep the id
+                    let mut updated = server;
+                    updated.id = existing.id;
+                    self.db.delete_server(&updated.name).await?;
+                    self.db.insert_server(&updated).await?;
+                }
+                None => {
+                    self.db.insert_server(&server).await?;
+                }
+            }
         }
         for git in backup.git_credentials {
-            self.db.insert_git_credential(&git).await?;
+            match self.db.get_git_credential(&git.name).await? {
+                Some(_) => {
+                    self.db.delete_git_credential(&git.name).await?;
+                    self.db.insert_git_credential(&git).await?;
+                }
+                None => {
+                    self.db.insert_git_credential(&git).await?;
+                }
+            }
         }
         for env in backup.env_profiles {
-            self.db.insert_env_profile(&env).await?;
+            match self.db.get_env_profile(&env.name).await? {
+                Some(_) => {
+                    self.db.delete_env_profile(&env.name).await?;
+                    self.db.insert_env_profile(&env).await?;
+                }
+                None => {
+                    self.db.insert_env_profile(&env).await?;
+                }
+            }
         }
         for agent in backup.agents {
-            self.db.insert_agent(&agent).await?;
+            match self.db.get_agent_by_token(&agent.token).await? {
+                Some(_) => {
+                    self.db.revoke_agent(&agent.name).await?;
+                    self.db.insert_agent(&agent).await?;
+                }
+                None => {
+                    self.db.insert_agent(&agent).await?;
+                }
+            }
         }
 
         Ok(())

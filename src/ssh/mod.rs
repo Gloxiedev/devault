@@ -83,7 +83,7 @@ impl client::Handler for ClientHandler {
             .join(".devault")
             .join("known_hosts");
         
-        let key_fingerprint = format!("{:?}", key);
+        let key_fingerprint = key.fingerprint(russh::keys::HashAlg::Sha256).to_string();
         
         if known_hosts_path.exists() {
             if let Ok(contents) = std::fs::read_to_string(&known_hosts_path) {

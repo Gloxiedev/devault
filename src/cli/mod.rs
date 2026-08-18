@@ -415,9 +415,11 @@ async fn get_vault(cli: &Cli, vault_dir: &PathBuf) -> Result<Vault> {
 }
 
 async fn cmd_init(vault_dir: &PathBuf, password: Option<String>) -> Result<()> {
-    let password = password.unwrap_or_else(|| get_password("Master password", true).unwrap());
+    let password = password
+        .or_else(|| get_password("Master password", true).ok())
+        .ok_or_else(|| DevaultError::InvalidInput("Password required".into()))?;
 
-    let vault = Vault::init(vault_dir.clone(), &password).await?;
+    let _vault = Vault::init(vault_dir.clone(), &password).await?;
     println!("Vault initialized at {}", vault_dir.display());
     Ok(())
 }
@@ -499,7 +501,9 @@ async fn cmd_add(
 ) -> Result<()> {
     let vault = get_vault(cli, vault_dir).await?;
     
-    let cred_value = credential.unwrap_or_else(|| get_password("Credential value", false).unwrap());
+    let cred_value = credential
+        .or_else(|| get_password("Credential value", false).ok())
+        .ok_or_else(|| DevaultError::InvalidInput("Credential value required".into()))?;
 
     let ctx = context.unwrap_or_else(|| get_input("Context").unwrap_or_default());
 
@@ -637,11 +641,15 @@ async fn cmd_server(cli: &Cli, vault_dir: &PathBuf, action: ServerAction, json: 
         ServerAction::Add { name, host, port, user, auth, secret, passphrase, credential, tags } => {
             let auth_method = match auth.as_str() {
                 "password" => {
-                    let pass = secret.unwrap_or_else(|| get_password("SSH password", false).unwrap());
+                    let pass = secret
+                        .or_else(|| get_password("SSH password", false).ok())
+                        .ok_or_else(|| DevaultError::InvalidInput("SSH password required".into()))?;
                     ServerAuthMethod::Password(pass)
                 }
                 "key" => {
-                    let key_path = secret.unwrap_or_else(|| get_input("Private key path").unwrap());
+                    let key_path = secret
+                        .or_else(|| get_input("Private key path").ok())
+                        .ok_or_else(|| DevaultError::InvalidInput("Private key path required".into()))?;
                     ServerAuthMethod::PrivateKey { key_path, passphrase }
                 }
                 "agent" => ServerAuthMethod::Agent,
@@ -690,7 +698,7 @@ async fn cmd_server(cli: &Cli, vault_dir: &PathBuf, action: ServerAction, json: 
                 println!("Name: {}", server.name);
                 println!("Host: {}:{}", server.host, server.port);
                 println!("User: {}", server.username);
-                println!("Auth: {:?}", server.auth_method);
+                println!("Auth: {}", server.auth_method);
             }
         }
         ServerAction::Exec { name, command } => {
@@ -855,14 +863,18 @@ async fn cmd_backup(cli: &Cli, vault_dir: &PathBuf, action: BackupAction) -> Res
     
     match action {
         BackupAction::Create { output, password } => {
-            let password = password.unwrap_or_else(|| get_password("Backup password", true).unwrap());
+            let password = password
+                .or_else(|| get_password("Backup password", true).ok())
+                .ok_or_else(|| DevaultError::InvalidInput("Backup password required".into()))?;
             let backup = vault.export_backup(&password).await?;
             let path = output.unwrap_or_else(|| PathBuf::from(format!("devault-backup-{}.json", chrono::Utc::now().format("%Y%m%d-%H%M%S"))));
             tokio::fs::write(&path, serde_json::to_vec(&backup)?).await?;
             println!("Backup created at {}", path.display());
         }
         BackupAction::Restore { file, password } => {
-            let password = password.unwrap_or_else(|| get_password("Backup password", false).unwrap());
+            let password = password
+                .or_else(|| get_password("Backup password", false).ok())
+                .ok_or_else(|| DevaultError::InvalidInput("Backup password required".into()))?;
             let data = tokio::fs::read(&file).await?;
             let backup: BackupData = serde_json::from_slice(&data)?;
             vault.import_backup(backup, &password).await?;

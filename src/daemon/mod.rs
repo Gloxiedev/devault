@@ -75,10 +75,52 @@ async fn handle_connection(
     let mut line = String::new();
 
     while reader.read_line(&mut line).await? > 0 {
-        let request: Request = serde_json::from_str(line.trim())
-            .map_err(|e| DevaultError::Ipc(e.to_string()))?;
-        
-        let response = process_request(request, &vault).await;
+        let response = match serde_json::from_str::<crate::ipc::AgentRequest>(line.trim()) {
+            Ok(agent_request) => {
+                let vault_guard = vault.lock().await;
+                match vault_guard.as_ref() {
+                    Some(v) => {
+                        match v.get_agent(&agent_request.token).await {
+                            Ok(agent) => {
+                                let authorized = match &agent_request.request {
+                                    crate::ipc::Request::ListCredentials { .. } |
+                                    crate::ipc::Request::GetCredential { .. } |
+                                    crate::ipc::Request::Status |
+                                    crate::ipc::Request::Ping => {
+                                        agent.permissions.contains(&crate::vault::models::AgentPermission::ListCredentials)
+                                    }
+                                    crate::ipc::Request::UseCredential { .. } => {
+                                        agent.permissions.contains(&crate::vault::models::AgentPermission::UseCredential)
+                                    }
+                                    crate::ipc::Request::ExecuteServer { .. } => {
+                                        agent.permissions.contains(&crate::vault::models::AgentPermission::ExecuteServer)
+                                    }
+                                    crate::ipc::Request::GitAuth { .. } => {
+                                        agent.permissions.contains(&crate::vault::models::AgentPermission::GitAuth)
+                                    }
+                                    crate::ipc::Request::GetEnvProfile { .. } => {
+                                        agent.permissions.contains(&crate::vault::models::AgentPermission::Environment)
+                                    }
+                                };
+                                if authorized {
+                                    process_request(agent_request.request, &vault).await
+                                } else {
+                                    crate::ipc::Response::Error("Insufficient permissions".into())
+                                }
+                            }
+                            Err(_) => crate::ipc::Response::Error("Invalid agent token".into()),
+                        }
+                    }
+                    None => crate::ipc::Response::Error("Vault not unlocked".into()),
+                }
+            }
+            Err(_) => {
+                match serde_json::from_str::<crate::ipc::Request>(line.trim()) {
+                    Ok(request) => process_request(request, &vault).await,
+                    Err(e) => crate::ipc::Response::Error(format!("Invalid request: {}", e)),
+                }
+            }
+        };
         
         let response_json = serde_json::to_string(&response)
             .map_err(|e| DevaultError::Ipc(e.to_string()))?;

@@ -69,9 +69,30 @@ pub fn credential_helper() -> Result<()> {
         }
     }
     
-    println!("protocol={}", protocol);
-    println!("host={}", host);
-    println!("username={}", username);
+    let vault_path = dirs::home_dir()
+        .unwrap_or_default()
+        .join(".devault")
+        .join("vault.db");
+    
+    let password = std::env::var("DEVAULT_PASSWORD").ok();
+    let password = password.as_deref().unwrap_or("");
+    
+    let rt = tokio::runtime::Runtime::new().map_err(|e| DevaultError::InvalidInput(e.to_string()))?;
+    let helper = GitCredentialHelper::new(vault_path, Some(password.to_string()));
+    
+    match rt.block_on(helper.get_credential(&format!("{}://{}", protocol, host), &username)) {
+        Ok((user, pass)) => {
+            println!("protocol={}", protocol);
+            println!("host={}", host);
+            println!("username={}", user);
+            println!("password={}", pass);
+        }
+        Err(_) => {
+            println!("protocol={}", protocol);
+            println!("host={}", host);
+            println!("username={}", username);
+        }
+    }
     
     Ok(())
 }
