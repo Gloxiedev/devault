@@ -1,0 +1,58 @@
+# Build artifacts
+/target/
+*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local vault data (never commit)
+/data/
+/.vault/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Credentials and secrets
+*.env
+*.env.local
+*.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.ppk
+
+# Backup files
+devault-backup-*.json
+*.backup
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+test-*
+/tmp/devault*
+
+# Cargo
+Cargo.lock
+
+# Coverage
+coverage/
+*.profraw
+*.profdata
+
+# Benchmarks
+*.bench
