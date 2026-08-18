@@ -2,10 +2,7 @@ use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce,
 };
-use argon2::{
-    password_hash::{PasswordHasher, SaltString},
-    Argon2,
-};
+use argon2::Argon2;
 use hkdf::Hkdf;
 use rand::RngCore;
 use sha2::Sha256;
@@ -13,7 +10,6 @@ use subtle::ConstantTimeEq;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 const SALT_LEN: usize = 32;
-const NONCE_LEN: usize = 12;
 const KEY_LEN: usize = 32;
 const MASTER_KEY_LABEL: &[u8] = b"devault-master-key-v1";
 

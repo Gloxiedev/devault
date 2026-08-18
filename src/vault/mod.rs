@@ -92,6 +92,10 @@ impl Vault {
     }
 
     pub async fn add_credential(&self, mut cred: Credential) -> Result<()> {
+        match self.db.get_credential(&cred.name).await? {
+            Some(_) => return Err(DevaultError::AlreadyExists(cred.name)),
+            None => {}
+        }
         let master_key = self.get_master_key().await?;
         let data_key = master_key.derive_data_key(cred.name.as_bytes())?;
         let encrypted = data_key.encrypt(&cred.credential)?;
@@ -164,6 +168,10 @@ impl Vault {
     }
 
     pub async fn add_server(&self, server: Server) -> Result<()> {
+        match self.db.get_server(&server.name).await? {
+            Some(_) => return Err(DevaultError::AlreadyExists(server.name)),
+            None => {}
+        }
         self.db.insert_server(&server).await
     }
 
@@ -182,6 +190,10 @@ impl Vault {
     }
 
     pub async fn add_git_credential(&self, git: GitCredential) -> Result<()> {
+        match self.db.get_git_credential(&git.name).await? {
+            Some(_) => return Err(DevaultError::AlreadyExists(git.name)),
+            None => {}
+        }
         self.db.insert_git_credential(&git).await
     }
 
@@ -200,6 +212,10 @@ impl Vault {
     }
 
     pub async fn add_env_profile(&self, profile: EnvironmentProfile) -> Result<()> {
+        match self.db.get_env_profile(&profile.name).await? {
+            Some(_) => return Err(DevaultError::AlreadyExists(profile.name)),
+            None => {}
+        }
         self.db.insert_env_profile(&profile).await
     }
 
@@ -218,6 +234,10 @@ impl Vault {
     }
 
     pub async fn add_agent(&self, agent: Agent) -> Result<()> {
+        match self.db.get_agent_by_token(&agent.token).await? {
+            Some(_) => return Err(DevaultError::AlreadyExists(agent.name)),
+            None => {}
+        }
         self.db.insert_agent(&agent).await
     }
 

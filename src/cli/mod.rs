@@ -297,7 +297,7 @@ pub enum EnvAction {
     Add {
         #[arg(help = "Profile name")]
         name: String,
-        #[arg(short = 'V', long, help = "Variables as KEY=VALUE (comma-separated)")]
+        #[arg(short = 'V', long, help = "Variables as KEY=VALUE (comma-separated, no commas in values)")]
         vars: String,
         #[arg(short, long, help = "Tags (comma-separated)")]
         tags: Option<String>,
@@ -345,7 +345,7 @@ pub enum BackupAction {
     },
 }
 
-pub async fn run(mut cli: Cli) -> Result<()> {
+pub async fn run(cli: Cli) -> Result<()> {
     let vault_dir = cli.vault_dir.clone().unwrap_or_else(default_vault_dir);
     let json_output = cli.json;
     let command = cli.command.clone();
@@ -952,7 +952,6 @@ fn detect_ides() -> Vec<DetectedIde> {
 
     for (name, paths) in candidates {
         let skill_dir = paths.first().cloned().unwrap_or_default();
-        let skill_file = skill_dir.join("devault").join("SKILL.md");
         if skill_dir.parent().map_or(false, |p| p.exists()) || name == "manual" {
             found.push(DetectedIde {
                 name: name.to_string(),

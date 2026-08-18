@@ -1,4 +1,4 @@
-use crate::error::{DevaultError, Result};
+use crate::error::Result;
 use crate::vault::{Vault, BackupData};
 use std::path::PathBuf;
 

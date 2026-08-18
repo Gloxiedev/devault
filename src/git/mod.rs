@@ -1,6 +1,6 @@
 use crate::error::{DevaultError, Result};
 use crate::vault::models::*;
-use git2::{Cred, CredentialType, RemoteCallbacks, Repository};
+use git2::{Cred, RemoteCallbacks, Repository};
 use std::path::Path;
 
 pub async fn configure(git_cred: &GitCredential, repo_path: Option<&str>) -> Result<()> {

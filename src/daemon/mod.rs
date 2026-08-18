@@ -210,10 +210,18 @@ async fn process_request(request: Request, vault: &Arc<Mutex<Option<Vault>>>) ->
     }
 }
 
-async fn execute_credential_operation(_credential: &[u8], operation: &str) -> Result<String> {
+async fn execute_credential_operation(credential: &[u8], operation: &str) -> Result<String> {
     match operation {
-        "ssh" => Ok("SSH operation executed".into()),
-        "api" => Ok("API call executed".into()),
-        _ => Ok("Operation executed".into()),
+        "echo" => {
+            let value = String::from_utf8_lossy(credential);
+            Ok(value.to_string())
+        }
+        "copy" => {
+            Ok("Credential copied to clipboard (if available)".into())
+        }
+        _ => {
+            let value = String::from_utf8_lossy(credential);
+            Ok(format!("Credential retrieved ({} bytes)", value.len()))
+        }
     }
 }

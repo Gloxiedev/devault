@@ -1,12 +1,10 @@
-use crate::error::{DevaultError, Result};
+use crate::error::Result;
 use crate::vault::models::*;
 use crate::vault::crypto::VaultHeader;
 use sqlx::{sqlite::SqlitePoolOptions, Row, SqlitePool};
 use std::path::Path;
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
-
-const DB_VERSION: i32 = 1;
 
 pub struct VaultDatabase {
     pool: SqlitePool,
