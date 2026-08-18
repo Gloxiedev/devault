@@ -78,15 +78,18 @@ pub fn credential_helper() -> Result<()> {
 
 pub struct GitCredentialHelper {
     vault_path: std::path::PathBuf,
+    password: Option<String>,
 }
 
 impl GitCredentialHelper {
-    pub fn new(vault_path: std::path::PathBuf) -> Self {
-        Self { vault_path }
+    pub fn new(vault_path: std::path::PathBuf, password: Option<String>) -> Self {
+        Self { vault_path, password }
     }
 
     pub async fn get_credential(&self, url: &str, username: &str) -> Result<(String, String)> {
-        let vault = crate::vault::Vault::unlock(self.vault_path.clone(), "").await?;
+        let password = self.password.as_deref()
+            .ok_or_else(|| DevaultError::InvalidInput("Password required for git credential helper".into()))?;
+        let vault = crate::vault::Vault::unlock(self.vault_path.clone(), password).await?;
         let git_creds = vault.list_git_credentials().await?;
         
         for gc in git_creds {

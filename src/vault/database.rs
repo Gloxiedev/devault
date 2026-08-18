@@ -346,7 +346,7 @@ impl VaultDatabase {
             tags: serde_json::from_str(&tags)?,
             created_at: DateTime::parse_from_rfc3339(&created_at)?.with_timezone(&Utc),
             updated_at: DateTime::parse_from_rfc3339(&updated_at)?.with_timezone(&Utc),
-            last_used_at: last_used_at.map(|s| DateTime::parse_from_rfc3339(&s).unwrap().with_timezone(&Utc)),
+            last_used_at: last_used_at.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc))),
         })
     }
 
@@ -627,7 +627,7 @@ impl VaultDatabase {
             token: row.get("token"),
             permissions: serde_json::from_str(&permissions)?,
             created_at: DateTime::parse_from_rfc3339(&created_at)?.with_timezone(&Utc),
-            last_used_at: last_used_at.map(|s| DateTime::parse_from_rfc3339(&s).unwrap().with_timezone(&Utc)),
+            last_used_at: last_used_at.and_then(|s| DateTime::parse_from_rfc3339(&s).ok().map(|dt| dt.with_timezone(&Utc))),
         })
     }
 }

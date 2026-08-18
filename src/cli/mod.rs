@@ -352,9 +352,9 @@ pub async fn run(mut cli: Cli) -> Result<()> {
     
     match command {
         Commands::Init { password } => cmd_init(&vault_dir, password).await,
-        Commands::Unlock { password } => cmd_unlock(&cli, &vault_dir, password).await,
+        Commands::Unlock { password } => cmd_unlock(&cli, &vault_dir, password, json_output).await,
         Commands::Lock => cmd_lock(&cli, &vault_dir).await,
-        Commands::Status => cmd_status(&cli, &vault_dir).await,
+        Commands::Status => cmd_status(&cli, &vault_dir, json_output).await,
         Commands::List { r#type, tag } => cmd_list(&cli, &vault_dir, r#type, tag, json_output).await,
         Commands::Add { name, credential, context, r#type, description, tags } => 
             cmd_add(&cli, &vault_dir, name, credential, context, r#type, description, tags).await,
@@ -408,7 +408,9 @@ fn get_input(prompt: &str) -> Result<String> {
 }
 
 async fn get_vault(cli: &Cli, vault_dir: &PathBuf) -> Result<Vault> {
-    let password = cli.master_password.clone().unwrap_or_else(|| get_password("Master password", false).unwrap());
+    let password = cli.master_password.clone()
+        .or_else(|| get_password("Master password", false).ok());
+    let password = password.ok_or_else(|| DevaultError::InvalidInput("Password required".into()))?;
     Vault::unlock(vault_dir.clone(), &password).await
 }
 
@@ -420,11 +422,26 @@ async fn cmd_init(vault_dir: &PathBuf, password: Option<String>) -> Result<()> {
     Ok(())
 }
 
-async fn cmd_unlock(cli: &Cli, vault_dir: &PathBuf, password: Option<String>) -> Result<()> {
-    let password = password.unwrap_or_else(|| get_password("Master password", false).unwrap());
+async fn cmd_unlock(cli: &Cli, vault_dir: &PathBuf, password: Option<String>, json: bool) -> Result<()> {
+    let password = password
+        .or_else(|| cli.master_password.clone())
+        .or_else(|| get_password("Master password", false).ok())
+        .ok_or_else(|| DevaultError::InvalidInput("Password required".into()))?;
 
-    let _vault = Vault::unlock(vault_dir.clone(), &password).await?;
-    println!("Vault unlocked");
+    let vault = Vault::unlock(vault_dir.clone(), &password).await?;
+    let status = vault.status().await?;
+    
+    if json {
+        println!("{}", serde_json::to_string_pretty(&status)?);
+    } else {
+        println!("Vault unlocked");
+        println!("Vault: {}", status.path.display());
+        println!("Credentials: {}", status.credentials);
+        println!("Servers: {}", status.servers);
+        println!("Git credentials: {}", status.git_credentials);
+        println!("Environment profiles: {}", status.environment_profiles);
+        println!("Agents: {}", status.agents);
+    }
     Ok(())
 }
 
@@ -435,11 +452,11 @@ async fn cmd_lock(cli: &Cli, vault_dir: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-async fn cmd_status(cli: &Cli, vault_dir: &PathBuf) -> Result<()> {
+async fn cmd_status(cli: &Cli, vault_dir: &PathBuf, json: bool) -> Result<()> {
     let vault = get_vault(cli, vault_dir).await?;
     let status = vault.status().await?;
     
-    if std::env::args().any(|a| a == "--json") {
+    if json {
         println!("{}", serde_json::to_string_pretty(&status)?);
     } else {
         println!("Vault: {}", status.path.display());
